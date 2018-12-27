@@ -1,0 +1,54 @@
+#!/usr/bin/zsh
+
+pivot_stats_by_node(){
+
+if [ "$#" -ne 1 ]; then
+ echo "Enter field to print [min, max, mean, median]:"
+ exit -1
+fi
+
+if [[ $1 = "min" ]]; then
+ FI=3
+elif [[ $1 = "max" ]]; then
+ FI=4
+elif [[ $1 = "mean" ]]; then
+ FI=5
+elif [[ $1 = "median" ]]; then
+ FI=6
+else
+ echo "Invalid field name.  Valid options are: [min, max, mean, median]"
+ exit -2
+fi
+
+
+NNODES=$(cat /var/local/foresight/db/current/stats/node_stats.dat | sed -e 's/  */,/g' | cut -f2 -d, | sort -n | tail -n1)
+#echo $((NNODES + 1))
+
+COLS=$((NNODES + 1))
+
+cat /var/local/foresight/db/current/stats/node_stats.dat | sed -e 's/  */,/g' | cut -f${FI} -d, | \
+awk "BEGIN {ORS=\" \"} \
+NR > 2 {print \$1} \
+(                                                               \
+  (  (NR-2) % $COLS == 0) &&                                    \
+     ( (NR-2) < (100 * $COLS))                                  \
+  )                                                             \
+                                                                \
+      {print \"\n[  \"(NR-2) / $((NNODES + 1))\"] \"}            \
+                                                                \
+(                                                               \
+  (  (NR-2) % $COLS == 0) &&                                    \
+     ( (NR-2) >= (100 * $COLS)) &&                              \
+     ( (NR-2  <  (1000 * $COLS))                                \
+  )                                                             \
+)                                                               \
+     {print \"\n[ \"(NR-2) / $((NNODES + 1))\"] \"}              \
+(                                                               \
+     ( (NR-2) % $COLS == 0 ) &&                                 \
+     ( (NR-2) >= (1000 * $COLS) )                               \
+)                                                               \
+     {print \"\n[\"(NR-2) / $((NNODES + 1))\"] \"}              \
+"
+}
+
+pivot_stats_by_node $*

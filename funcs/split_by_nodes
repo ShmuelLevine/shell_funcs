@@ -1,0 +1,8 @@
+split_by_nodes() {
+NNODES=$(cat /var/local/foresight/db/current/stats/node_stats.dat | sed -e 's/  */,/g' | cut -f2 -d, | sort -n | tail -n1)
+
+cat /var/local/foresight/db/current/stats/node_stats.dat| sed 2d | sed 1d | sed "0~$((NNODES + 1)) s/\$/\n/g"
+
+}
+
+split_by_nodes | tail -n45
