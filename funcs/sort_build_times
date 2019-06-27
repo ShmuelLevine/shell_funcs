@@ -1,0 +1,17 @@
+cat $1 \
+| sed '/Scanning/d' \
+| sed -e's|/usr/lib/ccache/g++ \$\* *\( *[[:digit:]]\+\.[[:digit:]]\+s [usersystem]*\)* [[:digit:]]\+% cpu \([[:digit:]]\+\(:[[:digit:]]*\)*\.[[:digit:]]\+\) total|\2|' \
+| sed '/Built/d' \
+| sed '/[o]$/N;s/\n\([[:digit:]]\)/ \1/g' \
+| sed -n '/^[0-9\[]/p' \
+| sed '/\.a$/d' \
+| sed '/[[:alpha:]]$/N;s/\n/ /' \
+| sed 's/\[ *[[:digit:]]\+%\] \(.*\)/\1/' \
+| sed '/Linking/w link_times.dat' \
+| sed '/Linking/d' \
+| sed 's/Building CXX object //' \
+| sed 's#CMakeFiles/[a-zA-Z_\.]\+/##' \
+| gawk ' /:/ { tm = $2; split(tm,ar,":"); mins = ar[1]; secs = ar[2]; print $1, mins * 60 + secs } /[^:]/ {print $0}' \
+| sed '/:/d' \
+| sort -k2 -g \
+| column -t
