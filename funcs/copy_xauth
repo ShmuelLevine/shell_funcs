@@ -1,0 +1,10 @@
+copy xauth(){
+
+for l in "${(@f)$(xauth list)}"; do
+l1=$(echo $l | cut -f1 -d' ')
+l2=$(echo $l | cut -f3 -d' ' )
+l3=$(echo $l | cut -f5 -d' ')
+sudo xauth add $l1 $l2 $l3
+done
+
+}

@@ -1,0 +1,66 @@
+f2bnets(){
+
+    print_help(){
+        print ""
+        print f2bnets usage: f2bnets \[-n \] \[-a\] \[--no-cidr\]
+        print
+        print "  -n N           specify the number N of top banned networks to display"
+        print "       --no-cidr do not display the banned networks in cidr notation"
+        print "  -a             search through all logs (included rotated log)"
+        print "                 [default is to search only /var/log/fail2ban.log]"
+        return
+    }
+
+    # Parse arguments
+    zparseopts -D -E -- n:=num a=all_logs h+=help -help+=help -no-cidr=net
+    #echo "$*"
+
+    [[ -n $help ]] && print_help
+    [[ "x$*" == "x" ]] || {echo "Invalid option(s) $*"
+    print_help 
+    return -1
+    }
+
+
+#    print num: $num[2]   all: $all_logs[1]
+#    [[ -z $num ]] && print 'num -z is true' || print 'num -z is false'
+#    [[ -z $all_logs ]] && print 'all_logs -z is true' || print 'all_logs -z is false'
+
+#If a size argument was given for the number of IPs to display, then use it;
+    #otherwise, default to 10
+    [[ -z $num ]] && _num=10 || _num=$num[2]
+    [[ -z $all_logs ]] && logs=( /var/log/fail2ban.log ) || logs=( /var/log/fail2ban.log* )
+
+#    [[ -z $all_logs ]] && {print $logs; return} || {print $logs; return}
+
+    # If the array of IP addresses exists (it shouldn't) delete it
+    [[ -v ips ]] && unset ips
+
+#    logs=( /var/log/fail2ban.log /var/log/fail2ban.log.1)
+    ips=($(sudo zgrep Ban $logs | cut -f 16 -d' ' | cut -f 1,2 -d'.'))
+
+    # If the associative array already exists (it shouldn't), delete it
+    [[ -v ipcount ]] && unset ipcount
+    # Create an associative array to hold the IPs addresses and the number of times
+    # each appears in the fail2ban logs with 'Ban' action
+    declare -A ipcount
+
+    # Iterate through the array of IP addresses.  If there is an entry in the array
+    # with the IP address as a key, increment it; otherwise set it to 1
+    {
+    for i in $ips; do
+        [[ -z ipcount[$i] ]] && ipcount[$i]=1 || ipcount[$i]=$(( ipcount[$i] + 1 ))
+    done
+    }
+
+    # Set the suffix to "" if option --no-cidr is specified 
+    # otherwise append the output in cidr notation
+    [[ -n $net ]] && suffix="" || suffix=".0.0/16"
+
+    # Print the top X IPs addresses and their frequency
+    {for k in ${(@k)ipcount}; print "$ipcount[$k] $k$suffix"} | sort -rn | head -n $_num
+
+    # Delete working variables
+    unset ips
+    unset ipcount
+}

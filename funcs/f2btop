@@ -1,0 +1,32 @@
+f2btop(){
+    #If a size argument was given for the number of IPs to display, then use it;
+    #otherwise, default to 10
+    [[ -z $1 ]] && num=10 || num=$1
+
+    # If the array of IP addresses exists (it shouldn't) delete it
+    [[ -v ips ]] && unset ips
+
+    logs=( /var/log/fail2ban.log /var/log/fail2ban.log.1)
+    ips=($(sudo grep Ban $logs | cut -f 16 -d' '))
+
+    # If the associative array already exists (it shouldn't), delete it
+    [[ -v ipcount ]] && unset ipcount
+    # Create an associative array to hold the IPs addresses and the number of times
+    # each appears in the fail2ban logs with 'Ban' action
+    declare -A ipcount
+
+    # Iterate through the array of IP addresses.  If there is an entry in the array
+    # with the IP address as a key, increment it; otherwise set it to 1
+    {
+    for i in $ips; do
+        [[ -z ipcount[$i] ]] && ipcount[$i]=1 || ipcount[$i]=$(( ipcount[$i] + 1 ))
+    done
+    }
+
+    # Print the top X IPs addresses and their frequency
+    {for k in ${(@k)ipcount}; print "$ipcount[$k] $k"} | sort -rn | head -n $num
+
+    # Delete working variables
+    unset ips
+    unset ipcount
+}
