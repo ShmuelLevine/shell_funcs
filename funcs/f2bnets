@@ -9,20 +9,29 @@ f2bnets(){
         print "       --no-geo  do not display the geolocation-based country of the banned networks"
         print "  -a             search through all logs (included rotated log)"
         print "                 [default is to search only /var/log/fail2ban.log]"
+        print "  -h   --help    display this help screen"
         return -1
     }
 
     # Function to retrive geolocation information for a given IP address or network
     # example usage: get_country 192.168.1.1
     get_country(){
-
-
-    curl -s http://api.ipstack.com/$1\?access_key\=4f90bf0da6f5f385c7d6513c18eeecf8 | sed -e 's/,/\n/g' | grep country_name | cut -f2 -d: | sed -e 's/\"//g'
+        curl -s http://api.ipstack.com/$1\?access_key\=4f90bf0da6f5f385c7d6513c18eeecf8 | sed -e 's/,/\n/g' | grep country_name | cut -f2 -d: | sed -e 's/\"//g'
     }
 
+    # Function to generate and display statistics for countries banned by fail2ban
+    # Requires 1 argument - an array variable containing all of the ip addresses to
+    # search
+    country_stats(){
+#	print $1
+#	all_ips=$( print $1 | sed -e 's/ /.0.0,/g' | sed -e 's/$/.0.0/')
+#        echo curl -s http://api.ipstack.com/$all_ips\?access_key\=4f90bf0da6f5f385c7d6513c18eeecf8 | sed -e 's/,/\n/g' | grep country_name | cut -f2 -d: | sed -e 's/\"//g'
+#	 /home/shmuel/bin/funcs/f2bcs.py $1
+
+    }
 
     # Parse arguments
-    zparseopts -D -E -- n:=num a=all_logs h+=help -help+=help -no-cidr=net -no-geo=geo
+    zparseopts -D -E -- n:=num a=all_logs h+=help -help+=help -no-cidr=shownet -no-geo=geo -country_stats=country_stats
     #echo "$*"
 
     [[ -n $help ]] && { print_help; return -1 }
@@ -30,7 +39,6 @@ f2bnets(){
     print_help 
     return -1
     }
-
 
     #    print num: $num[2]   all: $all_logs[1]
     #    [[ -z $num ]] && print 'num -z is true' || print 'num -z is false'
@@ -49,6 +57,10 @@ f2bnets(){
     #    logs=( /var/log/fail2ban.log /var/log/fail2ban.log.1)
     ips=($(sudo zgrep Ban $logs | zgrep -v Restore | cut -f 16 -d' ' | cut -f 1,2 -d'.'))
 
+#    [[ -n $country_stats ]] && {country_stats "$ips"; return 0}
+
+
+
     # If the associative array already exists (it shouldn't), delete it
     [[ -v ipcount ]] && unset ipcount
 
@@ -66,10 +78,15 @@ f2bnets(){
 
     # Set the suffix to "" if option --no-cidr is specified 
     # otherwise append the output in cidr notation
-    [[ -n $net ]] && suffix="" || suffix=".0.0/16"
+    [[ -n $shownet ]] && suffix="" || suffix=".0.0/16"
 
     # Print the top X IPs addresses and their frequency, save the data into a new array
-    ips_trunc=( $({for k in ${(@k)ipcount}; print "$ipcount[$k] $k"} | sort -rn | head -n $_num) )
+    [[ -n $country_stats ]] && {
+       ips_freqs=$({for k in ${(@k)ipcount}; print "$k:$ipcount[$k]"}) 
+       	 /home/shmuel/bin/funcs/f2bcs.py "$ips_freqs"
+	 return 0
+} 
+    ips_trunc=( $({for k in ${(@k)ipcount}; print "$ipcount[$k] $k$suffix"} | sort -rn | head -n $_num) )
 
     # Arrays used for geolocation
     icnt=()

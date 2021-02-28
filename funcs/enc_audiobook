@@ -1,0 +1,24 @@
+enc_audiobook(){
+  tgt_path=${AUDIOBOOK_ROOT:=/media/Videos/audiobooks_for_phone}
+  files=()
+  for l in $*; do
+    # if the argument is a directory, recurse through the entire directory, searching for files with mp3 or m4b extension
+    [[ -f $l ]] && files+=($l) ||  {
+
+        files+=( $l/**/*.mp3(N) $l/**/*.m4b(N) )
+
+        # check if there are any non-audio files in the directory which need to be copied
+	#ls $l/**/*.*[^mp3,^m4b] 2>/dev/null 1>&2 && { 
+	  for ff in $l/**/*.*[^mp3,^m4b](N); do
+            mkdir -p $tgt_path/${ff:h};
+	    cp -v $ff $tgt_path/$ff
+          done
+	 # } # end handle non-audio files
+      }
+  done
+   #echo files: $files
+    #echo $files |    parallel ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka >/dev/null 2>&1 </dev/null && echo "$f complete"
+    #echo $files |    parallel -N1 'echo ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka'
+    parallel -N1 "mkdir -p $tgt_path/{//}" ::: $files
+    parallel -N1 "print finished converting {} && ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka >/dev/null 2>&1" ::: $files
+}
