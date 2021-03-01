@@ -17,8 +17,10 @@ enc_audiobook(){
       }
   done
    #echo files: $files
+    total=${#files}
     #echo $files |    parallel ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka >/dev/null 2>&1 </dev/null && echo "$f complete"
     #echo $files |    parallel -N1 'echo ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka'
     parallel -N1 "mkdir -p $tgt_path/{//}" ::: $files
-    parallel -N1 "print finished converting {} && ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka >/dev/null 2>&1" ::: $files
+    #parallel -N1 "echo finished converting ( \'\{\#\}\' / $total ) {} && ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka >/dev/null 2>&1" ::: $files
+    parallel -N1 "echo finished converting {#} of $total -- {} && ffmpeg -i {} -c:a libopus -b:a 16384 -n $tgt_path/{.}.mka >/dev/null 2>&1" ::: $files
 }
